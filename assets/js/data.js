@@ -81,7 +81,7 @@ const menCopy =
 const womenCopy =
   "Empowering Marathi typography on soft, breathable cotton with a flattering modern cut. Made to move from morning chai to late-evening plans.";
 const toteCopy =
-  "Heavy 12oz canvas tote with reinforced handles and a roomy main compartment. Eco-friendly, reusable and printed with an original Marathi motif.";
+  "Premium Cotton Tote Bag — Carry Your Style. Carry Your Vibes. A thoughtfully designed, premium-quality 300 GSM tote bag with a spacious 16 × 14 inch size and secure zipper closure.";
 
 window.PV_PRODUCTS = [
   /* ── KIDS ───────────────────────────────────────────────── */
@@ -112,13 +112,13 @@ window.PV_PRODUCTS = [
   { sku: "PV-WMN-AML", slug: "allergic-to-morning-lavender", name: "Allergic To Morning Lavender", category: "women", price: 450, stock: 18, sizes: W, colors: ["Lavender"], desc: womenCopy, badge: "Bestseller", featured: 1 },
 
   /* ── TOTE BAGS ──────────────────────────────────────────── */
-  { sku: "PV-TOT-CHF", slug: "chafa", name: "Chafa", category: "tote", price: 350, stock: 30, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "", featured: 1 },
-  { sku: "PV-TOT-JSW", slug: "jastwand", name: "Jastwand", category: "tote", price: 350, stock: 28, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "", featured: 0 },
-  { sku: "PV-TOT-NGD", slug: "nishigandh", name: "Nishigandh", category: "tote", price: 300, stock: 25, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "", featured: 0 },
-  { sku: "PV-TOT-BRN", slug: "bharatnatyam", name: "Bharatnatyam", category: "tote", price: 350, stock: 22, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "Trending", featured: 1 },
-  { sku: "PV-TOT-KTH", slug: "kathak", name: "Kathak", category: "tote", price: 350, stock: 24, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "", featured: 1 },
-  { sku: "PV-TOT-PRJ", slug: "prajakta", name: "Prajakta", category: "tote", price: 350, stock: 26, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "", featured: 0 },
-  { sku: "PV-TOT-TLP", slug: "tulips", name: "Tulips", category: "tote", price: 300, stock: 27, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "Bestseller", featured: 1 },
+  { sku: "PV-TOT-CHF", slug: "chafa", name: "Chafa", category: "tote", price: 350, stock: 30, sizes: O, colors: ["Black"], desc: toteCopy, badge: "", featured: 1 },
+  { sku: "PV-TOT-JSW", slug: "jastwand", name: "Jastwand", category: "tote", price: 350, stock: 28, sizes: O, colors: ["Black"], desc: toteCopy, badge: "", featured: 0 },
+  { sku: "PV-TOT-NGD", slug: "nishigandh", name: "Nishigandh", category: "tote", price: 350, stock: 25, sizes: O, colors: ["Black"], desc: toteCopy, badge: "", featured: 0 },
+  { sku: "PV-TOT-BRN", slug: "bharatnatyam", name: "Bharatnatyam", category: "tote", price: 350, stock: 22, sizes: O, colors: ["Black"], desc: toteCopy, badge: "Trending", featured: 1 },
+  { sku: "PV-TOT-KTH", slug: "kathak", name: "Kathak", category: "tote", price: 350, stock: 24, sizes: O, colors: ["Black"], desc: toteCopy, badge: "", featured: 1 },
+  { sku: "PV-TOT-PRJ", slug: "prajakta", name: "Prajakta", category: "tote", price: 350, stock: 26, sizes: O, colors: ["Black"], desc: toteCopy, badge: "", featured: 0 },
+  { sku: "PV-TOT-TLP", slug: "tulips", name: "Tulips", category: "tote", price: 330, stock: 27, sizes: O, colors: ["Off White"], desc: toteCopy, badge: "Bestseller", featured: 1 },
 
   /* ── YOGA ───────────────────────────────────────────────── */
   { sku: "PV-YOG-KPC", slug: "keep-calm", name: "Keep Calm", category: "yoga", price: 450, stock: 14, sizes: W, colors: ["White"], desc: "Breathable, easy-moving cotton with a calm, minimal print. Made for the mat and everything after it.", badge: "New", featured: 1 },

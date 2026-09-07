@@ -87,23 +87,11 @@
             )})</span><span>− ${money(t.discount)}</span></div>`
           : ""
       }
-      <div class="sum-row"><span>Shipping</span><span>${
-        t.ship ? money(t.ship) : "Free"
-      }</span></div>
+      <div class="sum-row"><span>Delivery Fee</span><span>${money(t.baseShip)}</span></div>
+      <div class="sum-row" style="color:var(--green);font-weight:600"><span>Online Delivery Discount</span><span>− ${money(t.shipDiscount)}</span></div>
       ${t.tax ? `<div class="sum-row"><span>Tax</span><span>${money(t.tax)}</span></div>` : ""}
-      <div class="sum-row total"><span>Total</span><span>${money(t.total)}</span></div>
-
-      ${
-        t.sub < Number(Store.settings.freeShippingAbove)
-          ? `<div class="ship-bar">Add <b>${money(
-              Number(Store.settings.freeShippingAbove) - t.sub
-            )}</b> more for free shipping
-              <div class="track"><div class="fill" style="width:${Math.min(
-                100,
-                (t.sub / Number(Store.settings.freeShippingAbove)) * 100
-              )}%"></div></div></div>`
-          : `<div class="ship-bar" style="color:var(--green);font-weight:600">✓ Free shipping unlocked</div>`
-      }
+      <div class="sum-row total" style="margin-top:6px;padding-top:10px;border-top:1px dashed var(--line)"><span>Total (Online)</span><span>${money(t.total)}</span></div>
+      <p class="tiny muted" style="margin:8px 0 0">⚡ Free Delivery applies when paying online with UPI. COD delivery is ${money(t.baseShip)}.</p>
 
       <a class="btn btn-red btn-block btn-lg" href="checkout.html" style="margin-top:16px">Proceed to checkout</a>
       <div class="trust-row" style="margin-top:16px">

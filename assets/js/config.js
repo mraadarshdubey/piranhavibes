@@ -33,6 +33,7 @@ window.PV_CONFIG = {
   COD_ENABLED: true,
   COD_FEE: 0,
   UPI_ID: "piranhavibes@upi",
+  RAZORPAY_LINK: "https://rzp.io/rzp/b0G8pfgI",
   TAX_PERCENT: 0,
 
   // ── Behaviour ────────────────────────────────────────────────

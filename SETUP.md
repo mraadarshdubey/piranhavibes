@@ -562,3 +562,19 @@ You can also check from a browser — open your `/exec` URL with
 `?action=health` on the end. `"adminKeySet": true` means the password is
 configured; if you see `"service"` instead of `"adminKeySet"`, the deployment
 is stale.
+
+---
+
+### Razorpay Webhook Setup (Automated Order Payment Verification)
+
+1. Open your [Razorpay Dashboard](https://dashboard.razorpay.com/) (Live Mode).
+2. Go to **Settings** ▸ **Webhooks** ▸ **Add New Webhook**.
+3. **Webhook URL**: Paste your Google Apps Script Web App `/exec` URL (the one from `config.js` `API_URL`).
+4. **Secret**: Leave blank or set as preferred.
+5. **Active Events**: Select:
+   - `payment.captured`
+   - `payment_link.paid`
+   - `order.paid`
+6. Click **Save Webhook**.
+
+Whenever a customer completes payment on Razorpay, your Google Apps Script automatically marks the order in your Google Sheet as **Paid** with the Razorpay Payment ID (`pay_XXXXX`).

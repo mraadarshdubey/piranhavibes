@@ -57,7 +57,7 @@
     <a class="btn" href="track.html?id=${encodeURIComponent(id)}">Track this order</a>
     <a class="btn btn-ghost" href="shop.html">Keep shopping</a>
     <a class="btn btn-ghost" target="_blank" rel="noopener"
-       href="https://wa.me/${CFG.WHATSAPP}?text=${encodeURIComponent("Hi! My order ID is " + id)}">Confirm on WhatsApp</a>
+       href="https://wa.me/${CFG.WHATSAPP}?text=${encodeURIComponent("Hi! My order ID is " + id + (o && o.paymentMethod === "UPI" && o.txnRef ? " (UPI Ref / UTR: " + o.txnRef + ")" : ""))}">Confirm on WhatsApp</a>
   </div>
 </div>
 

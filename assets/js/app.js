@@ -15,7 +15,7 @@
   try {
     const ov = localStorage.getItem("pv_api_url");
     if (ov) CFG.API_URL = ov;
-  } catch (e) {}
+  } catch (e) { }
 
   const LS = {
     cart: "pv_cart_v1",
@@ -35,13 +35,13 @@
     String(s == null ? "" : s).replace(
       /[&<>"']/g,
       (c) =>
-        ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;",
-        }[c])
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[c])
     );
   const money = (n) =>
     CFG.CURRENCY +
@@ -60,7 +60,7 @@
   const write = (k, v) => {
     try {
       localStorage.setItem(k, JSON.stringify(v));
-    } catch (e) {}
+    } catch (e) { }
   };
   const qp = (k) => new URLSearchParams(location.search).get(k);
   const slugify = (s) =>
@@ -166,25 +166,44 @@
     ready: null,
   };
 
+  const SPECIFIC_BLACK_TOTES = [
+    "chafa",
+    "jastwand",
+    "nishigandh",
+    "bharatnatyam",
+    "kathak",
+    "prajakta",
+  ];
+
   function normalise(p) {
     const toArr = (v) =>
       Array.isArray(v)
         ? v.filter(Boolean)
         : String(v || "")
-            .split(/[,|]/)
-            .map((x) => x.trim())
-            .filter(Boolean);
+          .split(/[,|]/)
+          .map((x) => x.trim())
+          .filter(Boolean);
     const slug = p.slug || slugify(p.name);
+    let colors = toArr(p.colors);
+    if (SPECIFIC_BLACK_TOTES.includes(slug)) {
+      colors = ["Black"];
+    }
+    let price = Number(p.price) || 0;
+    if (slug === "tulips") {
+      price = 330;
+    } else if (SPECIFIC_BLACK_TOTES.includes(slug)) {
+      price = 350;
+    }
     return {
       sku: p.sku || slug.toUpperCase(),
       slug,
       name: p.name || "Untitled",
       category: p.category || "kids",
-      price: Number(p.price) || 0,
+      price,
       mrp: Number(p.mrp) || 0,
       stock: p.stock === "" || p.stock == null ? 0 : Number(p.stock),
       sizes: toArr(p.sizes),
-      colors: toArr(p.colors),
+      colors,
       desc: p.desc || "",
       badge: p.badge || "",
       featured: Number(p.featured) ? 1 : 0,
@@ -344,19 +363,17 @@
       discount = Math.min(discount, sub);
     }
     const after = sub - discount;
-    // Free-shipping qualification is judged on the pre-discount subtotal so a
-    // coupon can never push a qualifying order back into paid shipping.
-    const ship =
-      sub === 0
-        ? 0
-        : sub >= Number(s.freeShippingAbove)
-        ? 0
-        : Number(s.shippingFee) || 0;
+    const baseShip = sub === 0 ? 0 : Number(s.shippingFee) || 60;
+    const isOnline = method !== "COD";
+    const shipDiscount = (sub > 0 && isOnline) ? baseShip : 0;
+    const ship = (sub > 0 && !isOnline) ? baseShip : 0;
     const codFee = method === "COD" ? Number(s.codFee) || 0 : 0;
     const tax = Math.round((after * (Number(s.taxPercent) || 0)) / 100);
     return {
       sub,
       discount,
+      baseShip,
+      shipDiscount,
       ship,
       codFee,
       tax,
@@ -431,9 +448,7 @@
     ];
     const ann =
       Store.settings.announcement ||
-      "Free shipping on orders above " +
-        money(Store.settings.freeShippingAbove) +
-        " &nbsp;·&nbsp; <b>Dispatched in 48 hours</b> &nbsp;·&nbsp; Easy 7-day returns &nbsp;·&nbsp; 100% pure cotton";
+      "Complimentary Delivery — ₹60 shipping discount applied &nbsp;·&nbsp; <b>Dispatched in 48 hours</b> &nbsp;·&nbsp; Easy 7-day returns &nbsp;·&nbsp; 100% pure cotton";
     const annTrack = `<span>${ann}</span>`.repeat(4);
     return `
 <div class="announce"><div class="track">${annTrack}${annTrack}</div></div>
@@ -446,18 +461,15 @@
       ${nav
         .map(
           (n) =>
-            `<a href="${n[0]}"${
-              active === n[1] ? ' class="active"' : ""
+            `<a href="${n[0]}"${active === n[1] ? ' class="active"' : ""
             }>${n[1]}</a>`
         )
         .join("")}
     </nav>
     <div class="hdr-act">
-      <button class="icon-btn" id="btnSearch" aria-label="Search">${
-        ICON.search
+      <button class="icon-btn" id="btnSearch" aria-label="Search">${ICON.search
       }</button>
-      <a class="icon-btn" href="track.html" aria-label="Track order">${
-        ICON.truck
+      <a class="icon-btn" href="track.html" aria-label="Track order">${ICON.truck
       }</a>
       <button class="icon-btn" id="btnCart" aria-label="Open cart">
         ${ICON.bag}<span class="cart-count" id="cartCount">0</span>
@@ -501,8 +513,8 @@
       <div>
         <h5>Shop</h5>
         ${Store.categories
-          .map((c) => `<a href="shop.html?cat=${c.id}">${c.name}</a>`)
-          .join("")}
+        .map((c) => `<a href="shop.html?cat=${c.id}">${c.name}</a>`)
+        .join("")}
         <a href="shop.html">All Products</a>
       </div>
       <div>
@@ -517,16 +529,15 @@
         <h5>Get in touch</h5>
         <div class="contact-line">${ICON.mail}<a href="mailto:${CFG.EMAIL}" style="padding:0">${CFG.EMAIL}</a></div>
         <div class="contact-line">${ICON.phone}<a href="tel:${CFG.PHONE.replace(
-      /\s/g,
-      ""
-    )}" style="padding:0">${CFG.PHONE}</a></div>
+          /\s/g,
+          ""
+        )}" style="padding:0">${CFG.PHONE}</a></div>
         <div class="contact-line">${ICON.pin}<span>${CFG.ADDRESS}</span></div>
       </div>
     </div>
     <div class="ftr-bot">
-      <span>© ${new Date().getFullYear()} ${
-      CFG.BRAND
-    }. All rights reserved.</span>
+      <span>© ${new Date().getFullYear()} ${CFG.BRAND
+      }. All rights reserved.</span>
       <span>Rooted by Core · Made in Pune, India</span>
     </div>
 
@@ -556,11 +567,9 @@
   <div class="drawer-body" id="drawerBody"></div>
   <div class="drawer-ft" id="drawerFt"></div>
 </aside>
-<a class="wa-fab" href="https://wa.me/${
-      CFG.WHATSAPP
-    }?text=Hi%20Piranha%20Vibes!%20I%20have%20a%20question." target="_blank" rel="noopener" aria-label="Chat on WhatsApp">${
-      ICON.wa
-    }</a>
+<a class="wa-fab" href="https://wa.me/${CFG.WHATSAPP
+      }?text=Hi%20Piranha%20Vibes!%20I%20have%20a%20question." target="_blank" rel="noopener" aria-label="Chat on WhatsApp">${ICON.wa
+      }</a>
 <button class="to-top" id="toTop" aria-label="Back to top">${ICON.up}</button>
 <div class="toasts" id="toasts"></div>
 <div class="progress-bar" id="progressBar"></div>`;
@@ -581,25 +590,21 @@
       <img src="${p.image}" alt="${esc(p.name)}" loading="lazy" width="600" height="700"
            onerror="this.src='assets/img/brand/hero-main.webp'">
     </a>
-    ${
-      out
+    ${out
         ? '<span class="pc-badge out">Sold out</span>'
         : p.badge
-        ? `<span class="pc-badge${
-            p.badge.toLowerCase() === "new" ? " red" : ""
+          ? `<span class="pc-badge${p.badge.toLowerCase() === "new" ? " red" : ""
           }">${esc(p.badge)}</span>`
-        : off
-        ? `<span class="pc-badge red">${off}% off</span>`
-        : ""
-    }
-    <button class="pc-wish${
-      Wish.has(p.slug) ? " on" : ""
-    }" data-wish="${p.slug}" aria-label="Save">${ICON.heart}</button>
-    ${
-      out
+          : off
+            ? `<span class="pc-badge red">${off}% off</span>`
+            : ""
+      }
+    <button class="pc-wish${Wish.has(p.slug) ? " on" : ""
+      }" data-wish="${p.slug}" aria-label="Save">${ICON.heart}</button>
+    ${out
         ? ""
         : `<div class="pc-quick"><button class="btn btn-sm" data-quick="${p.slug}">Quick add</button></div>`
-    }
+      }
   </div>
   <a href="product.html?p=${p.slug}">
     <span class="pc-cat">${esc(catMeta(p.category).short)}</span>
@@ -610,13 +615,12 @@
     ${p.mrp > p.price ? `<span class="pc-mrp">${money(p.mrp)}</span>` : ""}
     ${off ? `<span class="pc-off">${off}% off</span>` : ""}
   </div>
-  ${
-    p.colors.length
-      ? `<div class="pc-swatches">${p.colors
+  ${p.colors.length
+        ? `<div class="pc-swatches">${p.colors
           .map((c) => `<i style="background:${colorHex(c)}" title="${esc(c)}"></i>`)
           .join("")}</div>`
-      : ""
-  }
+        : ""
+      }
   ${low ? `<div class="pc-stock">Only ${p.stock} left</div>` : ""}
 </article>`;
   }
@@ -667,21 +671,13 @@
 
     const s = Store.settings;
     const sub = Cart.subtotal();
-    const remain = Number(s.freeShippingAbove) - sub;
+    const t = totals();
     ft.innerHTML = `
-${
-  remain > 0
-    ? `<div class="ship-bar">Add <b>${money(
-        remain
-      )}</b> more for free shipping
-        <div class="track"><div class="fill" style="width:${Math.min(
-          100,
-          (sub / Number(s.freeShippingAbove)) * 100
-        )}%"></div></div></div>`
-    : `<div class="ship-bar" style="color:var(--green);font-weight:600">✓ You've unlocked free shipping</div>`
-}
-<div class="sum-row total"><span>Subtotal</span><span>${money(sub)}</span></div>
-<p class="tiny muted" style="margin:6px 0 14px">Shipping &amp; discounts calculated at checkout.</p>
+<div class="sum-row"><span>Subtotal</span><span>${money(sub)}</span></div>
+<div class="sum-row"><span>Delivery Fee</span><span>${money(t.baseShip)}</span></div>
+<div class="sum-row" style="color:var(--green);font-weight:600"><span>Online Delivery Discount</span><span>− ${money(t.shipDiscount)}</span></div>
+<div class="sum-row total" style="margin-top:6px;padding-top:8px;border-top:1px dashed var(--line)"><span>Total (Online)</span><span>${money(t.total)}</span></div>
+<p class="tiny muted" style="margin:6px 0 14px">⚡ Free delivery applied when paying online with UPI at checkout.</p>
 <a class="btn btn-block btn-red" href="checkout.html">Checkout ${ICON.arrow}</a>
 <a class="btn btn-block btn-ghost btn-sm" href="cart.html" style="margin-top:9px">View full bag</a>`;
   }
@@ -702,9 +698,8 @@ ${
     if (!box) return alert(msg);
     const el = document.createElement("div");
     el.className = "toast " + (kind === "err" ? "err" : "ok");
-    el.innerHTML = `<span class="ic">${
-      kind === "err" ? "!" : "✓"
-    }</span><span>${esc(msg)}</span>`;
+    el.innerHTML = `<span class="ic">${kind === "err" ? "!" : "✓"
+      }</span><span>${esc(msg)}</span>`;
     box.appendChild(el);
     setTimeout(() => el.remove(), 3600);
   }
@@ -763,9 +758,8 @@ ${
     $$("[data-magnet]").forEach((el) => {
       el.addEventListener("mousemove", (e) => {
         const r = el.getBoundingClientRect();
-        el.style.transform = `translate(${
-          (e.clientX - r.left - r.width / 2) * 0.16
-        }px, ${(e.clientY - r.top - r.height / 2) * 0.24}px)`;
+        el.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.16
+          }px, ${(e.clientY - r.top - r.height / 2) * 0.24}px)`;
       });
       el.addEventListener("mouseleave", () => (el.style.transform = ""));
     });
@@ -854,16 +848,16 @@ ${
       const list = Store.products.filter((p) => p.active);
       const res = q
         ? list.filter(
-            (p) =>
-              p.name.toLowerCase().includes(q.toLowerCase()) ||
-              catMeta(p.category).name.toLowerCase().includes(q.toLowerCase())
-          )
+          (p) =>
+            p.name.toLowerCase().includes(q.toLowerCase()) ||
+            catMeta(p.category).name.toLowerCase().includes(q.toLowerCase())
+        )
         : list.filter((p) => p.featured).slice(0, 8);
       sr.innerHTML = res.length
         ? res.slice(0, 12).map(cardHTML).join("")
         : `<p class="muted" style="grid-column:1/-1">No products match “${esc(
-            q
-          )}”. Try “tote”, “kids” or “Marathi”.</p>`;
+          q
+        )}”. Try “tote”, “kids” or “Marathi”.</p>`;
     }
 
     addEventListener("keydown", (e) => {
@@ -971,7 +965,7 @@ ${
     try {
       const r = await jsonp({ action: "track", id, phone });
       if (r && r.ok) return r;
-    } catch (e) {}
+    } catch (e) { }
     const mine = read(LS.orders, []).find(
       (o) =>
         String(o.id).toUpperCase() === String(id).toUpperCase() &&

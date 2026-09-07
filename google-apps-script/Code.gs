@@ -443,7 +443,15 @@ function doGet(e) {
 function doPost(e) {
   var out;
   try {
-    out = route(JSON.parse(e.postData.contents));
+    var raw = e && e.postData && e.postData.contents ? e.postData.contents : '{}';
+    var parsed = JSON.parse(raw);
+
+    // Auto-detect Razorpay Webhook payloads
+    if (parsed.event || parsed.entity === 'event' || parsed.action === 'razorpayWebhook') {
+      out = handleRazorpayWebhook(parsed);
+    } else {
+      out = route(parsed);
+    }
   } catch (err) {
     out = { ok: false, error: String(err && err.message ? err.message : err) };
   }
@@ -461,6 +469,7 @@ function route(body) {
   if (a === 'track') return trackOrder(d.id, d.phone);
   if (a === 'contact') return saveContact(d);
   if (a === 'subscribe') return saveSubscriber(d);
+  if (a === 'razorpayWebhook') return handleRazorpayWebhook(d);
 
   // admin
   if (!requireKey(d.key)) return { ok: false, error: 'Invalid or missing admin key' };
@@ -479,6 +488,99 @@ function route(body) {
   if (a === 'updateSettings') return updateSettings(d);
 
   return { ok: false, error: 'Unknown action: ' + a };
+}
+
+/* ==========================================================
+   RAZORPAY WEBHOOK HANDLER
+   ========================================================== */
+function handleRazorpayWebhook(body) {
+  try {
+    var event = body.event || '';
+    var payload = body.payload || {};
+    var payment = (payload.payment && payload.payment.entity) || (payload.payment_link && payload.payment_link.entity) || {};
+    var paymentId = payment.id || '';
+    var contact = String(payment.contact || '').replace(/\D/g, '').slice(-10);
+    var email = String(payment.email || '').toLowerCase().trim();
+    var notes = payment.notes || {};
+    var targetOrderId = notes.orderId || notes.id || '';
+
+    if (!paymentId && !event) {
+      return { ok: false, error: 'Not a valid Razorpay webhook payload' };
+    }
+
+    var book = ss();
+    var sh = book.getSheetByName(SHEETS.orders);
+    if (!sh) return { ok: false, error: 'Orders sheet missing' };
+
+    var data = sh.getDataRange().getValues();
+    if (data.length < 2) return { ok: true, message: 'No orders to update' };
+
+    var header = data[0];
+    var idCol = header.indexOf('id');
+    var statusCol = header.indexOf('status');
+    var phoneCol = header.indexOf('phone');
+    var emailCol = header.indexOf('email');
+    var txnCol = header.indexOf('txnRef');
+    var adminNoteCol = header.indexOf('adminNote');
+    var updatedCol = header.indexOf('updatedAt');
+
+    var matchedRowIndex = -1;
+
+    // 1. Match by explicit targetOrderId in notes if provided
+    if (targetOrderId) {
+      for (var r = data.length - 1; r >= 1; r--) {
+        if (String(data[r][idCol]).trim().toUpperCase() === String(targetOrderId).trim().toUpperCase()) {
+          matchedRowIndex = r + 1;
+          break;
+        }
+      }
+    }
+
+    // 2. Match by recent 10-digit customer phone
+    if (matchedRowIndex === -1 && contact && contact.length === 10) {
+      for (var r = data.length - 1; r >= 1; r--) {
+        var rowPhone = String(data[r][phoneCol] || '').replace(/\D/g, '').slice(-10);
+        var rowStatus = String(data[r][statusCol] || '').toLowerCase();
+        if (rowPhone === contact && (rowStatus === 'pending' || rowStatus === 'new' || rowStatus === 'unpaid')) {
+          matchedRowIndex = r + 1;
+          break;
+        }
+      }
+    }
+
+    // 3. Match by customer email
+    if (matchedRowIndex === -1 && email) {
+      for (var r = data.length - 1; r >= 1; r--) {
+        var rowEmail = String(data[r][emailCol] || '').toLowerCase().trim();
+        var rowStatus = String(data[r][statusCol] || '').toLowerCase();
+        if (rowEmail === email && (rowStatus === 'pending' || rowStatus === 'new' || rowStatus === 'unpaid')) {
+          matchedRowIndex = r + 1;
+          break;
+        }
+      }
+    }
+
+    if (matchedRowIndex > 0) {
+      var nowStr = new Date().toISOString();
+      sh.getRange(matchedRowIndex, statusCol + 1).setValue('Paid');
+      if (txnCol >= 0) {
+        sh.getRange(matchedRowIndex, txnCol + 1).setValue('Razorpay: ' + paymentId);
+      }
+      if (adminNoteCol >= 0) {
+        var existingNote = String(data[matchedRowIndex - 1][adminNoteCol] || '');
+        var newNote = (existingNote ? existingNote + ' | ' : '') + 'Verified via Razorpay webhook (' + event + ') on ' + nowStr;
+        sh.getRange(matchedRowIndex, adminNoteCol + 1).setValue(newNote);
+      }
+      if (updatedCol >= 0) {
+        sh.getRange(matchedRowIndex, updatedCol + 1).setValue(nowStr);
+      }
+      return { ok: true, status: 'updated', orderId: data[matchedRowIndex - 1][idCol], paymentId: paymentId };
+    }
+
+    return { ok: true, status: 'logged_unmatched', paymentId: paymentId, note: 'No matching pending order found' };
+  } catch (err) {
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
 }
 
 function reply(obj, callback) {
@@ -1126,13 +1228,13 @@ var SEED = [
 ['PV-WMN-AMK','allergic-to-morning','Allergic To Morning','women',450,0,15,W,'Kiwi Green','',1,1,'assets/img/products/allergic-to-morning.webp',WD],
 ['PV-WMN-CKR','chakra','Chakra','women',450,0,11,W,'Violet','New',1,1,'assets/img/products/chakra.webp',WD],
 ['PV-WMN-AML','allergic-to-morning-lavender','Allergic To Morning Lavender','women',450,0,18,W,'Lavender','Bestseller',1,1,'assets/img/products/allergic-to-morning-lavender.webp',WD],
-['PV-TOT-CHF','chafa','Chafa','tote',350,0,30,'One Size','Off White','',1,1,'assets/img/products/chafa.webp',TD],
-['PV-TOT-JSW','jastwand','Jastwand','tote',350,0,28,'One Size','Off White','',0,1,'assets/img/products/jastwand.webp',TD],
-['PV-TOT-NGD','nishigandh','Nishigandh','tote',300,0,25,'One Size','Off White','',0,1,'assets/img/products/nishigandh.webp',TD],
-['PV-TOT-BRN','bharatnatyam','Bharatnatyam','tote',350,0,22,'One Size','Off White','Trending',1,1,'assets/img/products/bharatnatyam.webp',TD],
-['PV-TOT-KTH','kathak','Kathak','tote',350,0,24,'One Size','Off White','',1,1,'assets/img/products/kathak.webp',TD],
-['PV-TOT-PRJ','prajakta','Prajakta','tote',350,0,26,'One Size','Off White','',0,1,'assets/img/products/prajakta.webp',TD],
-['PV-TOT-TLP','tulips','Tulips','tote',300,0,27,'One Size','Off White','Bestseller',1,1,'assets/img/products/tulips.webp',TD],
+['PV-TOT-CHF','chafa','Chafa','tote',350,0,30,'One Size','Black','',1,1,'assets/img/products/chafa.webp',TD],
+['PV-TOT-JSW','jastwand','Jastwand','tote',350,0,28,'One Size','Black','',0,1,'assets/img/products/jastwand.webp',TD],
+['PV-TOT-NGD','nishigandh','Nishigandh','tote',350,0,25,'One Size','Black','',0,1,'assets/img/products/nishigandh.webp',TD],
+['PV-TOT-BRN','bharatnatyam','Bharatnatyam','tote',350,0,22,'One Size','Black','Trending',1,1,'assets/img/products/bharatnatyam.webp',TD],
+['PV-TOT-KTH','kathak','Kathak','tote',350,0,24,'One Size','Black','',1,1,'assets/img/products/kathak.webp',TD],
+['PV-TOT-PRJ','prajakta','Prajakta','tote',350,0,26,'One Size','Black','',0,1,'assets/img/products/prajakta.webp',TD],
+['PV-TOT-TLP','tulips','Tulips','tote',330,0,27,'One Size','Off White','Bestseller',1,1,'assets/img/products/tulips.webp',TD],
 ['PV-YOG-KPC','keep-calm','Keep Calm','yoga',450,0,14,W,'White','New',1,1,'assets/img/products/keep-calm.webp',
   'Breathable, easy-moving cotton with a calm, minimal print. Made for the mat and everything after it.'],
 ['PV-INF-CRW','cute-romper','Cute Romper','infant',250,0,20,I,'White','',1,1,'assets/img/products/cute-romper.webp',

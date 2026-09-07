@@ -44,10 +44,17 @@
         )})</span><span>− ${money(t.discount)}</span></div>`
       : ""
   }
-  <div class="sum-row"><span>Shipping</span><span>${t.ship ? money(t.ship) : "Free"}</span></div>
+  <div class="sum-row"><span>Delivery Fee</span><span>${money(t.baseShip)}</span></div>
+  ${
+    t.shipDiscount > 0
+      ? `<div class="sum-row" style="color:var(--green);font-weight:600"><span>Online Payment Discount</span><span>− ${money(
+          t.shipDiscount
+        )}</span></div>`
+      : ""
+  }
   ${t.codFee ? `<div class="sum-row"><span>COD handling</span><span>${money(t.codFee)}</span></div>` : ""}
   ${t.tax ? `<div class="sum-row"><span>Tax</span><span>${money(t.tax)}</span></div>` : ""}
-  <div class="sum-row total"><span>To pay</span><span id="grandTotal">${money(t.total)}</span></div>
+  <div class="sum-row total" style="margin-top:6px;padding-top:10px;border-top:1px dashed var(--line)"><span>To pay</span><span id="grandTotal">${money(t.total)}</span></div>
   <div class="trust-row" style="margin-top:16px">
     <div>${ICON.truck}48h dispatch</div>
     <div>${ICON.refresh}7-day returns</div>
@@ -103,25 +110,35 @@
           Store.settings.codEnabled
             ? `<label class="radio-card${method === "COD" ? " on" : ""}" data-m="COD">
                 <input type="radio" name="pay" value="COD" ${method === "COD" ? "checked" : ""}>
-                <span><b>Cash on Delivery</b><small>Pay the courier in cash when your parcel arrives.${
-                  Number(Store.settings.codFee) ? ` A handling fee of ${money(Store.settings.codFee)} applies.` : ""
+                <span><b>Cash on Delivery</b><small>Pay courier in cash on delivery. Standard ${money(
+                  Store.settings.shippingFee || 60
+                )} delivery fee applies.${
+                  Number(Store.settings.codFee) ? ` Plus ${money(Store.settings.codFee)} COD handling fee.` : ""
                 }</small></span>
               </label>`
             : ""
         }
         <label class="radio-card${method === "UPI" ? " on" : ""}" data-m="UPI">
           <input type="radio" name="pay" value="UPI" ${method === "UPI" ? "checked" : ""}>
-          <span><b>UPI / Bank transfer</b><small>Pay to <b>${esc(
-            Store.settings.upiId || CFG.UPI_ID
-          )}</b> using any UPI app, then enter your transaction reference below. We confirm within a few hours.</small></span>
+          <span><b>Pay Online (Razorpay — UPI, Cards, NetBanking)</b> <span class="badge" style="background:#e6f4ea;color:#137333;font-weight:700;font-size:0.75rem;padding:2px 8px;border-radius:4px;margin-left:6px">FREE Delivery (Save ₹60)</span><small style="display:block;margin-top:2px">Instant &amp; secure checkout via UPI (GPay, PhonePe, Paytm, CRED), Cards &amp; NetBanking. Free delivery discount applied!</small></span>
         </label>
-        <div id="upiBox" class="${method === "UPI" ? "" : "hidden"}" style="margin-top:6px">
-          <div class="field"><label for="txn">UPI transaction / UTR reference *</label>
-            <input id="txn" name="txn" placeholder="e.g. 4291XXXXXXXX" value="">
-            <span class="msg">Enter the reference from your UPI app</span></div>
-          <p class="tiny muted">Amount to pay: <b id="upiAmt">${money(t.total)}</b> to <b>${esc(
-      Store.settings.upiId || CFG.UPI_ID
-    )}</b>. Your order is confirmed once we verify the payment.</p>
+        <div id="upiBox" class="${method === "UPI" ? "" : "hidden"}" style="margin-top:12px">
+          <div class="upi-pay-card" style="background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:16px">
+            <div class="upi-badge-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+              <span class="upi-pill" style="font-weight:700;font-size:0.76rem;letter-spacing:0.04em;color:var(--ink)">🔒 SECURE RAZORPAY PAYMENT</span>
+              <div class="upi-apps-icons" style="display:flex;gap:6px;flex-wrap:wrap">
+                <span class="app-tag">UPI</span>
+                <span class="app-tag">GPay</span>
+                <span class="app-tag">PhonePe</span>
+                <span class="app-tag">Paytm</span>
+                <span class="app-tag">Cards</span>
+                <span class="app-tag">NetBanking</span>
+              </div>
+            </div>
+            <p style="font-size:0.86rem;line-height:1.55;color:var(--tx-2);margin:0">
+              When you click <b>Place order &amp; Pay</b> below, your order will be safely registered in our database and you will proceed to the official Razorpay gateway to complete your payment.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -133,7 +150,7 @@
       <label class="fopt" style="margin-bottom:16px"><input type="checkbox" id="agree"> I agree to the shipping &amp; 7-day return policy *</label>
       <p class="tiny" id="agreeErr" style="color:var(--red);display:none;margin:-10px 0 14px">Please accept the policy to continue</p>
 
-      <button class="btn btn-red btn-lg btn-block" type="submit" id="placeBtn">Place order · <span id="btnTotal">${money(
+      <button class="btn btn-red btn-lg btn-block" type="submit" id="placeBtn">${method === "UPI" ? "Place order & Pay · " : "Place order · "}<span id="btnTotal">${money(
         t.total
       )}</span></button>
       <p class="tiny muted" style="text-align:center;margin-top:12px">You'll receive an order ID immediately. No account needed.</p>
@@ -151,10 +168,12 @@
         rc.querySelector("input").checked = true;
         $("#upiBox").classList.toggle("hidden", method !== "UPI");
         const nt = totals(coupon, method);
-        $("#grandTotal").textContent = money(nt.total);
-        $("#btnTotal").textContent = money(nt.total);
-        const ua = $("#upiAmt");
-        if (ua) ua.textContent = money(nt.total);
+        const side = $(".co-side");
+        if (side) side.innerHTML = summary(nt);
+        const placeBtn = $("#placeBtn");
+        if (placeBtn) {
+          placeBtn.innerHTML = (method === "UPI" ? "Place order & Pay · " : "Place order · ") + `<span id="btnTotal">${money(nt.total)}</span>`;
+        }
       };
     });
 
@@ -182,7 +201,6 @@
     set("city", f.city.value.trim().length < 2);
     set("pincode", !/^\d{6}$/.test(f.pincode.value.trim()));
     set("state", !f.state.value);
-    if (method === "UPI") set("txn", f.txn.value.trim().length < 6);
     const agreed = $("#agree").checked;
     $("#agreeErr").style.display = agreed ? "none" : "block";
     if (!agreed) ok = false;
@@ -214,8 +232,8 @@
       pincode: f.pincode.value.trim(),
       landmark: f.landmark.value.trim(),
       notes: f.notes.value.trim(),
-      paymentMethod: method,
-      txnRef: method === "UPI" ? f.txn.value.trim() : "",
+      paymentMethod: method === "UPI" ? "Online (Razorpay)" : "COD",
+      txnRef: "Razorpay Checkout",
       coupon: t.discount ? coupon.toUpperCase() : "",
       subtotal: t.sub,
       discount: t.discount,
@@ -261,7 +279,13 @@
     );
     sessionStorage.removeItem("pv_coupon");
     Cart.clear();
-    location.href = "order-success.html?id=" + encodeURIComponent(res.orderId);
+
+    const rzpUrl = Store.settings.razorpayLink || CFG.RAZORPAY_LINK;
+    if (method === "UPI" && rzpUrl) {
+      location.href = rzpUrl;
+    } else {
+      location.href = "order-success.html?id=" + encodeURIComponent(res.orderId);
+    }
   }
 
   paint();
